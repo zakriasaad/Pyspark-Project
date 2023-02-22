@@ -1,0 +1,35 @@
+#Calculating total distance for each bike; Listing top 10
+
+from pyspark.sql import functions as F
+total_distance=df.groupBy('bike_id').agg({'Distance':'sum'}).orderBy('sum(Distance)',ascending=False).limit(10)
+tot_dis = df.groupBy("bike_id").agg(F.round(F.sum("Distance"),2)).withColumnRenamed("round(sum(Distance), 2)", "Total_Distance").orderBy("Total_Distance", ascending = False).limit(10)
+tot_dis.show()
+
+
+#Calculating the number of trips for each start station; Listing the top 10; Finding the ratio of male to female usage
+
+top_startstations=df.groupBy('start_station_name').count().orderBy('count',ascending=False).limit(10)
+trips_by_gender=df.groupBy("start_station_name").pivot("member_gender",['Male','Female','Other']).agg(F.count("start_station_name")).orderBy('Male',ascending=False).limit(10)
+trips_by_gender=trips_by_gender.withColumn('Male',col('Male').cast('int'))
+trips_by_gender=trips_by_gender.withColumn('Female',col('Female').cast('int'))
+df5 = trips_by_gender.withColumn('ratio',col('Male')/col('Female'))
+
+
+#Comparing customer vs subscriber usage (as a percentage)
+
+percent_user=df.groupBy('user_type').count().withColumn('Percentage',(col('count')/df.count())*100)
+percent_user.show()
+percent_user.withColumn('Percentage',(col('count')/df.count())*100).show()
+
+
+#Calculating the age of all users; Exploring the relationship between age and total distance travelled
+
+df=df.withColumn('Memeber_Age',year(to_timestamp(col('member_birth_year'))))
+df=df.withColumn('Memeber_Age',col('Memeber_Age').cast('int'))
+df2=df.filter(df["Memeber_Age"]>=1980)
+df2=df2.withColumn('Memeber_Age',abs(col('Memeber_Age')-2023))
+df3 = df2.groupBy('Memeber_Age').agg(F.count('Memeber_Age'), F.sum('Distance')).orderBy('sum(Distance)', ascending = False)
+df3 = df3.withColumn('sum(Distance)', col('sum(distance)')/1000)
+df3.show()
+df2.groupBy('Memeber_Age').agg({'Distance':'sum'}).orderBy('sum(Distance)',ascending=False)
+distance_vs_age.withColumn('sum(Distance)',col('sum(Distance)')/1000).show()
